@@ -317,14 +317,15 @@ class PhoenixSparkIT extends AbstractPhoenixSparkIT {
 
     val records = new mutable.MutableList[Row]
     for (x <- 1 to totalRecords) {
-      records += Row(x.toLong, x.toString, x)
+      records += Row(x.toLong, x.toString, x, x + 15)
     }
     val dataSet = records.toList
 
     val schema = StructType(
       Seq(StructField("ID", LongType, nullable = false),
         StructField("COL1", StringType),
-        StructField("COL2", IntegerType)))
+        StructField("COL2", IntegerType),
+        StructField("DYN_COL1", IntegerType)))
 
     // Distribute the dataset into an RDD with just 1 partition so we use only 1 executor.
     // This makes it easy to deterministically count the batched commits from that executor
@@ -495,6 +496,7 @@ class PhoenixSparkIT extends AbstractPhoenixSparkIT {
     count shouldEqual 1L
   }
 
+  // TODO: fix this
   test("Ensure DataFrame field normalization (PHOENIX-2196)") {
     val rdd1 = spark.sparkContext
       .parallelize(Seq((1L, 1L, "One"), (2L, 2L, "Two")))

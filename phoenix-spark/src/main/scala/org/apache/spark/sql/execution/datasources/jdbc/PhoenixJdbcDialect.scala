@@ -18,8 +18,12 @@
 
 package org.apache.spark.sql.execution.datasources.jdbc
 
+import java.util.Locale
+
+import org.apache.phoenix.schema.types.PDataType
+import org.apache.spark.sql.execution.datasources.SparkJdbcUtil
 import org.apache.spark.sql.jdbc.{JdbcDialect, JdbcType}
-import org.apache.spark.sql.types.{BinaryType, ByteType, DataType, StringType}
+import org.apache.spark.sql.types.{ArrayType, BinaryType, BooleanType, ByteType, DataType, StringType}
 
 private object PhoenixJdbcDialect  extends JdbcDialect {
 
@@ -28,12 +32,21 @@ private object PhoenixJdbcDialect  extends JdbcDialect {
   /**
     * This is only called for ArrayType (see JdbcUtils.makeSetter)
     */
+  // TODO: Fix this for arrays
   override def getJDBCType(dt: DataType): Option[JdbcType] = dt match {
     case StringType => Some(JdbcType("VARCHAR", java.sql.Types.VARCHAR))
     case BinaryType => Some(JdbcType("BINARY(" + dt.defaultSize + ")", java.sql.Types.BINARY))
     case ByteType => Some(JdbcType("TINYINT", java.sql.Types.TINYINT))
+    case BooleanType => Some(JdbcType("BOOLEAN", java.sql.Types.BOOLEAN))
+    case ArrayType(et, _) => Some(getArrayType(et))
     case _ => None
   }
 
+  def getArrayType(et: DataType): JdbcType = {
+    val typeName = SparkJdbcUtil.getJdbcType(et, PhoenixJdbcDialect).databaseTypeDefinition
+      .toLowerCase(Locale.ROOT).split("\\(")(0)
+    val pDataType = PDataType.fromSqlTypeName(typeName)
+    JdbcType(pDataType.getSqlTypeName + " ARRAY", PDataType.ARRAY_TYPE_BASE + pDataType.getSqlType)
+  }
 
 }
